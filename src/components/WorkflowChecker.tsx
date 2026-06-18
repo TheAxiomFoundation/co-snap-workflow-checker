@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
@@ -13,13 +13,17 @@ import {
   XCircle,
 } from "lucide-react";
 import {
+  loadCoSnapWorkflowRuntime,
+  type CoSnapWorkflowRuntime,
+} from "@/lib/coSnapAxiom";
+import {
   DEFAULT_WORKFLOW_INPUTS,
-  evaluateWorkflow,
   formatRuleDate,
   type RuleResult,
   type RuleStatus,
   type SignatureMethod,
   type WorkflowInputs,
+  type WorkflowResult,
 } from "@/lib/coSnapWorkflow";
 
 const signatureOptions: Array<{ value: SignatureMethod; label: string }> = [
@@ -31,10 +35,69 @@ const signatureOptions: Array<{ value: SignatureMethod; label: string }> = [
   { value: "none", label: "None" },
 ];
 
+type RuntimeState =
+  | { kind: "loading" }
+  | { kind: "ready"; runtime: CoSnapWorkflowRuntime }
+  | { kind: "error"; message: string };
+
+type RunState =
+  | { kind: "loading" }
+  | { kind: "ready"; workflow: WorkflowResult }
+  | { kind: "error"; message: string };
+
 export function WorkflowChecker() {
   const [inputs, setInputs] = useState<WorkflowInputs>(DEFAULT_WORKFLOW_INPUTS);
-  const workflow = useMemo(() => evaluateWorkflow(inputs), [inputs]);
-  const blockingCount = workflow.failCount + workflow.warningCount;
+  const [runtimeState, setRuntimeState] = useState<RuntimeState>({
+    kind: "loading",
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadCoSnapWorkflowRuntime()
+      .then((runtime) => {
+        if (!cancelled) {
+          setRuntimeState({ kind: "ready", runtime });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setRuntimeState({
+            kind: "error",
+            message:
+              error instanceof Error ? error.message : "Axiom failed to initialize.",
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const runState = useMemo<RunState>(() => {
+    if (runtimeState.kind === "loading") {
+      return { kind: "loading" };
+    }
+    if (runtimeState.kind === "error") {
+      return runtimeState;
+    }
+    try {
+      return {
+        kind: "ready",
+        workflow: runtimeState.runtime.runScenario(inputs),
+      };
+    } catch (error) {
+      return {
+        kind: "error",
+        message:
+          error instanceof Error ? error.message : "Axiom execution failed.",
+      };
+    }
+  }, [inputs, runtimeState]);
+
+  const workflow = runState.kind === "ready" ? runState.workflow : null;
+  const blockingCount = workflow ? workflow.failCount + workflow.warningCount : 0;
 
   function patch(next: Partial<WorkflowInputs>) {
     setInputs((current) => ({ ...current, ...next }));
@@ -172,6 +235,42 @@ export function WorkflowChecker() {
                     onChange={(missedInterview) => patch({ missedInterview })}
                   />
                 </div>
+                {inputs.missedInterview ? (
+                  <div className="grid gap-2 rounded-[4px] border border-[var(--color-rule-subtle)] bg-[var(--color-rule-subtle)] p-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Toggle
+                        label="Notice mailed"
+                        checked={inputs.missedInterviewNoticeMailed}
+                        onChange={(missedInterviewNoticeMailed) =>
+                          patch({ missedInterviewNoticeMailed })
+                        }
+                      />
+                      <Toggle
+                        label="Notice says interview missed"
+                        checked={inputs.missedInterviewNoticeSaysMissed}
+                        onChange={(missedInterviewNoticeSaysMissed) =>
+                          patch({ missedInterviewNoticeSaysMissed })
+                        }
+                      />
+                      <Toggle
+                        label="Notice says reschedule"
+                        checked={inputs.missedInterviewNoticeSaysReschedule}
+                        onChange={(missedInterviewNoticeSaysReschedule) =>
+                          patch({ missedInterviewNoticeSaysReschedule })
+                        }
+                      />
+                      <NumberField
+                        label="Denial day after application"
+                        value={inputs.denialDayAfterApplication}
+                        min={0}
+                        max={60}
+                        onChange={(denialDayAfterApplication) =>
+                          patch({ denialDayAfterApplication })
+                        }
+                      />
+                    </div>
+                  </div>
+                ) : null}
                 <DateField
                   label="Opportunity to participate"
                   value={inputs.opportunityDate}
@@ -242,26 +341,30 @@ export function WorkflowChecker() {
               <SummaryMetric
                 icon={<CalendarDays size={18} />}
                 label="Application age"
-                value={`${workflow.daysSinceApplication} days`}
+                value={workflow ? `${workflow.daysSinceApplication} days` : "Loading"}
                 detail={`Filed ${formatRuleDate(inputs.applicationDate)}`}
               />
               <SummaryMetric
                 icon={<Clock3 size={18} />}
                 label="30-day deadline"
-                value={workflow.normalDeadline}
+                value={workflow?.normalDeadline ?? "Loading"}
                 detail="Opportunity to participate"
               />
               <SummaryMetric
                 icon={<ShieldCheck size={18} />}
                 label="7-day deadline"
-                value={workflow.expeditedDeadline}
+                value={workflow?.expeditedDeadline ?? "Loading"}
                 detail="Expedited benefits"
               />
               <SummaryMetric
                 icon={<FileCheck2 size={18} />}
                 label="Open issues"
                 value={String(blockingCount)}
-                detail={`${workflow.failCount} fail, ${workflow.warningCount} warn`}
+                detail={
+                  workflow
+                    ? `${workflow.failCount} fail, ${workflow.warningCount} warn`
+                    : "Axiom loading"
+                }
               />
             </div>
 
@@ -276,13 +379,19 @@ export function WorkflowChecker() {
                   </p>
                 </div>
                 <div className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
-                  {workflow.passCount} pass / {workflow.warningCount} warn / {workflow.failCount} fail
+                  {workflow
+                    ? `${workflow.passCount} pass / ${workflow.warningCount} warn / ${workflow.failCount} fail`
+                    : "Axiom runtime"}
                 </div>
               </div>
               <div className="divide-y divide-[var(--color-rule-subtle)]">
-                {workflow.results.map((result) => (
-                  <RuleRow key={result.id} result={result} />
-                ))}
+                {runState.kind === "ready" ? (
+                  runState.workflow.results.map((result) => (
+                    <RuleRow key={result.id} result={result} />
+                  ))
+                ) : (
+                  <RuntimeMessage state={runState} />
+                )}
               </div>
             </section>
 
@@ -292,10 +401,15 @@ export function WorkflowChecker() {
                   Axiom surface
                 </h2>
                 <p className="mt-2 max-w-[620px] text-sm leading-6 text-[var(--color-ink-secondary)]">
-                  This first pass keeps execution in a typed browser model that mirrors
-                  the encoded RuleSpec subset. The listed targets are the seam for
-                  replacing the model with compiled RuleSpec execution.
+                  This app compiles and executes merged RuleSpec in the browser with
+                  the Axiom Rust/WASM rules engine. The UI only supplies factual
+                  case inputs and renders Axiom outputs.
                 </p>
+                <div className="mt-3 font-mono text-xs uppercase tracking-[0.12em] text-[var(--color-ink-muted)]">
+                  {workflow
+                    ? `Engine ${workflow.engineVersion} / artifact ${workflow.artifactFormatVersion}`
+                    : "Axiom WASM initializing"}
+                </div>
               </div>
               <div className="grid gap-2 text-sm text-[var(--color-ink-secondary)]">
                 <TargetLine section="4.202" label="Application content and validity" />
@@ -473,6 +587,22 @@ function RuleRow({ result }: { result: RuleResult }) {
         </code>
       </div>
     </article>
+  );
+}
+
+function RuntimeMessage({
+  state,
+}: {
+  state: Extract<RunState, { kind: "loading" } | { kind: "error" }>;
+}) {
+  return (
+    <div className="p-5 text-sm leading-6 text-[var(--color-ink-secondary)]">
+      {state.kind === "loading" ? (
+        <span>Loading Axiom WASM and compiling Colorado SNAP RuleSpec modules.</span>
+      ) : (
+        <span className="text-red-700">Axiom runtime error: {state.message}</span>
+      )}
+    </div>
   );
 }
 
