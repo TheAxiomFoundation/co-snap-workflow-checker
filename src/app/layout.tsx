@@ -70,9 +70,6 @@ export default function RootLayout({
               href="/"
               className="min-w-0 border-l border-[var(--color-rule)] pl-3 no-underline"
             >
-              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
-                Interactive
-              </div>
               <div className="font-serif text-[16px] font-normal leading-tight text-[var(--color-ink)]">
                 Workflow checker
               </div>
