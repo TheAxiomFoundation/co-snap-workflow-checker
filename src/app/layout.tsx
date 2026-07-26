@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { GeistSans } from "geist/font/sans";
 import { JetBrains_Mono, Newsreader } from "next/font/google";
-import { Footer, GradientSync, Nav } from "@axiom-foundation/ui";
 import "./globals.css";
+
+const LOGO_SRC = "/gallery/workflow/logos/axiom-foundation.svg";
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -51,17 +51,32 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${mono.variable} ${serif.variable}`}
     >
       <body>
-        <GradientSync />
-        <Nav
-          baseUrl="https://axiom-foundation.org"
-          logoSrc="/gallery/workflow/logos/axiom-foundation.svg"
-        />
+        <header className="flex items-center justify-between gap-4 border-b border-[var(--color-rule)] px-4 py-3 sm:px-6 lg:px-8">
+          <a
+            href="https://axiom-foundation.org"
+            className="flex items-center gap-2 no-underline"
+          >
+            <img src={LOGO_SRC} alt="" className="h-6 w-auto shrink-0" />
+            <span className="text-sm font-medium text-[var(--color-ink)]">
+              Axiom Foundation
+            </span>
+          </a>
+          <a
+            href="https://axiom-foundation.org/demos"
+            className="text-sm text-[var(--color-ink-secondary)] no-underline hover:text-[var(--color-ink)]"
+          >
+            All demos
+          </a>
+        </header>
         <main className="relative z-10">{children}</main>
-        <Footer
-          renderLink={Link}
-          baseUrl="https://axiom-foundation.org"
-          logoSrc="/gallery/workflow/logos/axiom-foundation.svg"
-        />
+        <footer className="border-t border-[var(--color-rule)] px-4 py-6 text-center text-sm text-[var(--color-ink-muted)] sm:px-6 lg:px-8">
+          <a
+            href="https://axiom-foundation.org"
+            className="text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)]"
+          >
+            axiom-foundation.org
+          </a>
+        </footer>
       </body>
     </html>
   );
