@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { GeistSans } from "geist/font/sans";
 import { JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
@@ -52,18 +53,34 @@ export default function RootLayout({
     >
       <body>
         <header className="flex items-center justify-between gap-4 border-b border-[var(--color-rule)] px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <a
+              href="https://axiom-foundation.org"
+              aria-label="Axiom Foundation"
+              className="inline-flex w-[100px] shrink-0 no-underline"
+            >
+              <img
+                src={LOGO_SRC}
+                alt="Axiom Foundation"
+                width={100}
+                className="block h-auto w-full"
+              />
+            </a>
+            <Link
+              href="/"
+              className="min-w-0 border-l border-[var(--color-rule)] pl-3 no-underline"
+            >
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)]">
+                Interactive
+              </div>
+              <div className="font-serif text-[16px] font-normal leading-tight text-[var(--color-ink)]">
+                Workflow checker
+              </div>
+            </Link>
+          </div>
           <a
-            href="https://axiom-foundation.org"
-            className="flex items-center gap-2 no-underline"
-          >
-            <img src={LOGO_SRC} alt="" className="h-6 w-auto shrink-0" />
-            <span className="text-sm font-medium text-[var(--color-ink)]">
-              Axiom Foundation
-            </span>
-          </a>
-          <a
-            href="https://axiom-foundation.org/demos"
-            className="text-sm text-[var(--color-ink-secondary)] no-underline hover:text-[var(--color-ink)]"
+            href="https://axiom.org/demos"
+            className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-muted)] no-underline hover:text-[var(--color-accent)] hover:underline"
           >
             All demos
           </a>
