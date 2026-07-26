@@ -144,7 +144,7 @@ export function loadCoSnapWorkflowRuntime() {
 async function createRuntime(): Promise<CoSnapWorkflowRuntime> {
   const wasm = await loadWasmModule();
   await wasm.default({
-    module_or_path: "/workflow/axiom-rules-engine/axiom_rules_engine_wasm_bg.wasm",
+    module_or_path: "/gallery/workflow/axiom-rules-engine/axiom_rules_engine_wasm_bg.wasm",
   });
 
   const modules = await loadRuleSpecModules();
@@ -200,7 +200,7 @@ async function loadRuleSpecModules() {
   const entries = await Promise.all(
     Object.values(MODULE).map(async (target) => {
       const relativePath = target
-        .replace("us-co:", "/workflow/rulespec/us-co/")
+        .replace("us-co:", "/gallery/workflow/rulespec/us-co/")
         .concat(".yaml");
       const text = await fetch(relativePath).then((response) => {
         if (!response.ok) {
@@ -219,7 +219,7 @@ async function loadWasmModule(): Promise<AxiomWasmModule> {
     specifier: string,
   ) => Promise<AxiomWasmModule>;
 
-  return dynamicImport("/workflow/axiom-rules-engine/axiom_rules_engine_wasm.js");
+  return dynamicImport("/gallery/workflow/axiom-rules-engine/axiom_rules_engine_wasm.js");
 }
 
 function executeOutputs(
