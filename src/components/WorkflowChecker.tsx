@@ -13,18 +13,20 @@ import {
   XCircle,
 } from "lucide-react";
 import {
-  loadCoSnapWorkflowRuntime,
-  type CoSnapWorkflowRuntime,
-} from "@/lib/coSnapAxiom";
+  loadSnapWorkflowRuntime,
+  type SnapWorkflowRuntime,
+} from "@/lib/axiomRuntime";
+import { DEFAULT_STATE_ID, SNAP_STATES, STATE_ORDER } from "@/lib/states";
 import {
   DEFAULT_WORKFLOW_INPUTS,
   formatRuleDate,
   type RuleResult,
   type RuleStatus,
   type SignatureMethod,
+  type StateId,
   type WorkflowInputs,
   type WorkflowResult,
-} from "@/lib/coSnapWorkflow";
+} from "@/lib/snapWorkflow";
 
 const signatureOptions: Array<{ value: SignatureMethod; label: string }> = [
   { value: "handwritten", label: "Handwritten" },
@@ -35,10 +37,10 @@ const signatureOptions: Array<{ value: SignatureMethod; label: string }> = [
   { value: "none", label: "None" },
 ];
 
-type RuntimeState =
-  | { kind: "loading" }
-  | { kind: "ready"; runtime: CoSnapWorkflowRuntime }
-  | { kind: "error"; message: string };
+type LoadedRuntime =
+  | { kind: "ready"; stateId: StateId; runtime: SnapWorkflowRuntime }
+  | { kind: "error"; stateId: StateId; message: string };
+
 
 type RunState =
   | { kind: "loading" }
@@ -46,24 +48,27 @@ type RunState =
   | { kind: "error"; message: string };
 
 export function WorkflowChecker() {
+  const [stateId, setStateId] = useState<StateId>(DEFAULT_STATE_ID);
   const [inputs, setInputs] = useState<WorkflowInputs>(DEFAULT_WORKFLOW_INPUTS);
-  const [runtimeState, setRuntimeState] = useState<RuntimeState>({
-    kind: "loading",
-  });
+  const [loadedRuntime, setLoadedRuntime] = useState<LoadedRuntime | null>(null);
+
+  const snapState = SNAP_STATES[stateId];
+  const ui = snapState.ui;
 
   useEffect(() => {
     let cancelled = false;
 
-    loadCoSnapWorkflowRuntime()
+    loadSnapWorkflowRuntime(snapState.definition)
       .then((runtime) => {
         if (!cancelled) {
-          setRuntimeState({ kind: "ready", runtime });
+          setLoadedRuntime({ kind: "ready", stateId: snapState.ui.id, runtime });
         }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setRuntimeState({
+          setLoadedRuntime({
             kind: "error",
+            stateId: snapState.ui.id,
             message:
               error instanceof Error ? error.message : "Axiom failed to initialize.",
           });
@@ -73,19 +78,19 @@ export function WorkflowChecker() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [snapState]);
 
   const runState = useMemo<RunState>(() => {
-    if (runtimeState.kind === "loading") {
+    if (!loadedRuntime || loadedRuntime.stateId !== stateId) {
       return { kind: "loading" };
     }
-    if (runtimeState.kind === "error") {
-      return runtimeState;
+    if (loadedRuntime.kind === "error") {
+      return { kind: "error", message: loadedRuntime.message };
     }
     try {
       return {
         kind: "ready",
-        workflow: runtimeState.runtime.runScenario(inputs),
+        workflow: loadedRuntime.runtime.runScenario(inputs),
       };
     } catch (error) {
       return {
@@ -94,7 +99,7 @@ export function WorkflowChecker() {
           error instanceof Error ? error.message : "Axiom execution failed.",
       };
     }
-  }, [inputs, runtimeState]);
+  }, [inputs, loadedRuntime, stateId]);
 
   const workflow = runState.kind === "ready" ? runState.workflow : null;
   const blockingCount = workflow ? workflow.failCount + workflow.warningCount : 0;
@@ -109,17 +114,40 @@ export function WorkflowChecker() {
         <header className="grid gap-6 border-b border-[var(--color-rule)] pb-7 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.1fr)] lg:items-end">
           <div>
             <p className="mb-3 font-mono text-[0.7rem] uppercase tracking-[0.22em] text-[var(--color-ink-muted)]">
-              Colorado SNAP operations
+              {ui.operationsLabel}
             </p>
             <h1 className="max-w-[780px] text-4xl font-semibold leading-[1.04] text-[var(--color-ink)] md:text-6xl">
               Application workflow checker
             </h1>
           </div>
-          <div className="max-w-[720px] text-base leading-7 text-[var(--color-ink-secondary)] md:text-lg">
-            <p>
-              Check filing, interview, and processing timing against Axiom RuleSpec
-              concepts from <span className="font-semibold text-[var(--color-ink)]">10 CCR 2506-1</span>.
-            </p>
+          <div className="flex max-w-[720px] flex-col gap-4">
+            <div
+              className="flex w-fit rounded-[6px] border border-[var(--color-rule)] bg-[var(--color-paper-elevated)] p-1"
+              role="group"
+              aria-label="Select state"
+            >
+              {STATE_ORDER.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setStateId(id)}
+                  aria-pressed={id === stateId}
+                  className={`rounded-[4px] px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                    id === stateId
+                      ? "bg-[var(--color-ink)] text-[var(--color-paper)]"
+                      : "text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)]"
+                  }`}
+                >
+                  {SNAP_STATES[id].ui.name}
+                </button>
+              ))}
+            </div>
+            <div className="text-base leading-7 text-[var(--color-ink-secondary)] md:text-lg">
+              <p>
+                Check filing, interview, and processing timing against Axiom RuleSpec
+                concepts from <span className="font-semibold text-[var(--color-ink)]">{ui.regulationName}</span>.
+              </p>
+            </div>
           </div>
         </header>
 
@@ -153,7 +181,7 @@ export function WorkflowChecker() {
                   onChange={(applicationDate) => patch({ applicationDate })}
                 />
                 <DateField
-                  label="Correct county received"
+                  label={ui.receivedDateLabel}
                   value={inputs.correctCountyReceivedDate}
                   onChange={(correctCountyReceivedDate) =>
                     patch({ correctCountyReceivedDate })
@@ -222,13 +250,15 @@ export function WorkflowChecker() {
                     checked={inputs.expeditedService}
                     onChange={(expeditedService) => patch({ expeditedService })}
                   />
-                  <Toggle
-                    label="Eligibility determined"
-                    checked={inputs.eligibilityDetermined}
-                    onChange={(eligibilityDetermined) =>
-                      patch({ eligibilityDetermined })
-                    }
-                  />
+                  {ui.showEligibilityDeterminedToggle ? (
+                    <Toggle
+                      label="Eligibility determined"
+                      checked={inputs.eligibilityDetermined}
+                      onChange={(eligibilityDetermined) =>
+                        patch({ eligibilityDetermined })
+                      }
+                    />
+                  ) : null}
                   <Toggle
                     label="Missed interview"
                     checked={inputs.missedInterview}
@@ -245,13 +275,15 @@ export function WorkflowChecker() {
                           patch({ missedInterviewNoticeMailed })
                         }
                       />
-                      <Toggle
-                        label="Notice says interview missed"
-                        checked={inputs.missedInterviewNoticeSaysMissed}
-                        onChange={(missedInterviewNoticeSaysMissed) =>
-                          patch({ missedInterviewNoticeSaysMissed })
-                        }
-                      />
+                      {ui.showNoticeSaysMissedToggle ? (
+                        <Toggle
+                          label="Notice says interview missed"
+                          checked={inputs.missedInterviewNoticeSaysMissed}
+                          onChange={(missedInterviewNoticeSaysMissed) =>
+                            patch({ missedInterviewNoticeSaysMissed })
+                          }
+                        />
+                      ) : null}
                       <Toggle
                         label="Notice says reschedule"
                         checked={inputs.missedInterviewNoticeSaysReschedule}
@@ -259,20 +291,22 @@ export function WorkflowChecker() {
                           patch({ missedInterviewNoticeSaysReschedule })
                         }
                       />
-                      <NumberField
-                        label="Denial day after application"
-                        value={inputs.denialDayAfterApplication}
-                        min={0}
-                        max={60}
-                        onChange={(denialDayAfterApplication) =>
-                          patch({ denialDayAfterApplication })
-                        }
-                      />
+                      {ui.showDenialDayField ? (
+                        <NumberField
+                          label="Denial day after application"
+                          value={inputs.denialDayAfterApplication}
+                          min={0}
+                          max={60}
+                          onChange={(denialDayAfterApplication) =>
+                            patch({ denialDayAfterApplication })
+                          }
+                        />
+                      ) : null}
                     </div>
                   </div>
                 ) : null}
                 <DateField
-                  label="Opportunity to participate"
+                  label={ui.opportunityDateLabel}
                   value={inputs.opportunityDate}
                   onChange={(opportunityDate) => patch({ opportunityDate })}
                 />
@@ -283,13 +317,15 @@ export function WorkflowChecker() {
                     patch({ benefitsAvailableDate })
                   }
                 />
-                <Toggle
-                  label="Later interview scheduled"
-                  checked={inputs.subsequentInterviewScheduled}
-                  onChange={(subsequentInterviewScheduled) =>
-                    patch({ subsequentInterviewScheduled })
-                  }
-                />
+                {ui.showSubsequentInterviewToggle ? (
+                  <Toggle
+                    label="Later interview scheduled"
+                    checked={inputs.subsequentInterviewScheduled}
+                    onChange={(subsequentInterviewScheduled) =>
+                      patch({ subsequentInterviewScheduled })
+                    }
+                  />
+                ) : null}
               </FieldGroup>
 
               <FieldGroup title="Interview">
@@ -346,13 +382,21 @@ export function WorkflowChecker() {
               />
               <SummaryMetric
                 icon={<Clock3 size={18} />}
-                label="30-day deadline"
+                label={
+                  workflow
+                    ? `${workflow.normalProcessingDays}-day deadline`
+                    : "Processing deadline"
+                }
                 value={workflow?.normalDeadline ?? "Loading"}
-                detail="Opportunity to participate"
+                detail={ui.normalDeadlineDetail}
               />
               <SummaryMetric
                 icon={<ShieldCheck size={18} />}
-                label="7-day deadline"
+                label={
+                  workflow
+                    ? `${workflow.expeditedProcessingDays}-day deadline`
+                    : "Expedited deadline"
+                }
                 value={workflow?.expeditedDeadline ?? "Loading"}
                 detail="Expedited benefits"
               />
@@ -375,7 +419,7 @@ export function WorkflowChecker() {
                     Rule results
                   </h2>
                   <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
-                    Each result maps to a RuleSpec target and Colorado rule section.
+                    Each result maps to a RuleSpec target and {ui.name} rule section.
                   </p>
                 </div>
                 <div className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--color-ink-muted)]">
@@ -390,7 +434,7 @@ export function WorkflowChecker() {
                     <RuleRow key={result.id} result={result} />
                   ))
                 ) : (
-                  <RuntimeMessage state={runState} />
+                  <RuntimeMessage state={runState} loadingMessage={ui.loadingMessage} />
                 )}
               </div>
             </section>
@@ -412,9 +456,13 @@ export function WorkflowChecker() {
                 </div>
               </div>
               <div className="grid gap-2 text-sm text-[var(--color-ink-secondary)]">
-                <TargetLine section="4.202" label="Application content and validity" />
-                <TargetLine section="4.204" label="Interview timing and missed interviews" />
-                <TargetLine section="4.205" label="Normal and expedited processing clocks" />
+                {ui.targetLines.map((line) => (
+                  <TargetLine
+                    key={line.section}
+                    section={line.section}
+                    label={line.label}
+                  />
+                ))}
               </div>
             </section>
           </div>
@@ -592,13 +640,15 @@ function RuleRow({ result }: { result: RuleResult }) {
 
 function RuntimeMessage({
   state,
+  loadingMessage,
 }: {
   state: Extract<RunState, { kind: "loading" } | { kind: "error" }>;
+  loadingMessage: string;
 }) {
   return (
     <div className="p-5 text-sm leading-6 text-[var(--color-ink-secondary)]">
       {state.kind === "loading" ? (
-        <span>Loading Axiom WASM and compiling Colorado SNAP RuleSpec modules.</span>
+        <span>{loadingMessage}</span>
       ) : (
         <span className="text-red-700">Axiom runtime error: {state.message}</span>
       )}

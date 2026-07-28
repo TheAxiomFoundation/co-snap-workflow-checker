@@ -50,7 +50,9 @@ export type WorkflowResult = {
   processingDayOne: string;
   normalDeadline: string;
   expeditedDeadline: string;
-  applicationValidityDeadline: string;
+  applicationValidityDeadline?: string;
+  normalProcessingDays: number;
+  expeditedProcessingDays: number;
   passCount: number;
   failCount: number;
   warningCount: number;
@@ -64,6 +66,24 @@ export type WorkflowFacts = {
   applicationProcessingDayOneOffset: number;
   opportunityDaysAfterApplication: number;
   benefitsDaysAfterApplication: number;
+};
+
+export type StateId = "us-ny" | "us-co";
+
+export type SnapStateUi = {
+  id: StateId;
+  name: string;
+  operationsLabel: string;
+  regulationName: string;
+  loadingMessage: string;
+  receivedDateLabel: string;
+  opportunityDateLabel: string;
+  normalDeadlineDetail: string;
+  showEligibilityDeterminedToggle: boolean;
+  showNoticeSaysMissedToggle: boolean;
+  showDenialDayField: boolean;
+  showSubsequentInterviewToggle: boolean;
+  targetLines: Array<{ section: string; label: string }>;
 };
 
 export const DEFAULT_WORKFLOW_INPUTS: WorkflowInputs = {
@@ -114,6 +134,14 @@ export function deriveWorkflowFacts(inputs: WorkflowInputs): WorkflowFacts {
       benefitsDate,
       applicationDate,
     ),
+  };
+}
+
+export function countStatuses(results: RuleResult[]) {
+  return {
+    passCount: results.filter((result) => result.status === "pass").length,
+    failCount: results.filter((result) => result.status === "fail").length,
+    warningCount: results.filter((result) => result.status === "warning").length,
   };
 }
 
