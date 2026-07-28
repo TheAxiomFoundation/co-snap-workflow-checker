@@ -21,21 +21,21 @@ const serif = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "Colorado SNAP workflow checker — Axiom Foundation",
+  title: "SNAP workflow checker — Axiom Foundation",
   description:
-    "A case-processing checklist for Colorado SNAP application rules encoded in Axiom RuleSpec.",
+    "A case-processing checklist for SNAP application rules encoded in Axiom RuleSpec — New York (18 NYCRR Part 387) by default, with Colorado (10 CCR 2506-1).",
   openGraph: {
     type: "website",
     siteName: "Axiom Foundation",
-    title: "Colorado SNAP workflow checker",
+    title: "SNAP workflow checker",
     description:
-      "Check filing, interview, and processing deadlines against Colorado SNAP RuleSpec concepts.",
+      "Check filing, interview, and processing deadlines against New York and Colorado SNAP RuleSpec concepts.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Colorado SNAP workflow checker",
+    title: "SNAP workflow checker",
     description:
-      "Check filing, interview, and processing deadlines against Colorado SNAP RuleSpec concepts.",
+      "Check filing, interview, and processing deadlines against New York and Colorado SNAP RuleSpec concepts.",
   },
 };
 

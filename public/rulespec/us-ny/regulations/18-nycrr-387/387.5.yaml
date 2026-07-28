@@ -1,0 +1,140 @@
+format: rulespec/v1
+module:
+  proof_validation:
+    required: true
+  source_verification:
+    corpus_citation_path: us-ny/regulation/18-nycrr-387/387.5
+  summary: |-
+    Any household has the right to file a SNAP application with the local social services district in person, through an authorized representative, or through the mail, on the day application is requested or at a later date. An application is filed on the date the signed form containing at least the applicant's name and address is received through the mail or in person. Social services districts must complete the determination of eligibility and benefit issuance within thirty days of filing an application, and application procedures must be designed to identify households entitled to expedited service at the time the household requests assistance.
+rules:
+  - name: snap_incomplete_application_minimum_content_met
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: 18 NYCRR section 387.5(a)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/regulation/18-nycrr-387/387.5
+              excerpt: "the form contains the applicant's name and address, and is signed by a responsible member"
+    versions:
+      - effective_from: '2025-10-01'
+        formula: |-
+          application_form_contains_name
+          and application_form_contains_address
+          and (
+              application_form_signed_by_responsible_household_member
+              or application_form_signed_by_household_authorized_representative
+          )
+
+  - name: snap_application_signature_valid
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: 18 NYCRR section 387.5(a)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: definition
+            source:
+              corpus_citation_path: us-ny/regulation/18-nycrr-387/387.5
+              excerpt: "is signed by a responsible member"
+    versions:
+      - effective_from: '2025-10-01'
+        formula: |-
+          application_form_signed
+
+  - name: normal_processing_calendar_day_limit
+    kind: parameter
+    dtype: Count
+    source: 18 NYCRR section 387.5(f)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/regulation/18-nycrr-387/387.5
+              excerpt: "determination of eligibility and benefit issuance within 30 days of filing an application"
+    versions:
+      - effective_from: '2025-10-01'
+        formula: |-
+          30
+
+  - name: application_processing_day_one_calendar_day_offset
+    kind: parameter
+    dtype: Count
+    source: 18 NYCRR section 387.5(c), (f)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/regulation/18-nycrr-387/387.5
+              excerpt: "within 30 days of filing an application"
+    versions:
+      - effective_from: '2025-10-01'
+        formula: |-
+          1
+
+  - name: newly_certified_household_eligibility_determination_and_issuance_timely
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: 18 NYCRR section 387.5(f)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/regulation/18-nycrr-387/387.5
+          - path: versions[0].formula
+            kind: import
+            import:
+              target: us-ny:regulations/18-nycrr-387/387.5#normal_processing_calendar_day_limit
+              output: normal_processing_calendar_day_limit
+              hash: sha256:local
+    versions:
+      - effective_from: '2025-10-01'
+        formula: |-
+          (not household_newly_certified)
+          or household_given_expedited_service
+          or (
+              eligibility_determined_and_benefits_issued
+              and calendar_days_following_application_filing_before_eligibility_determination_and_issuance <= normal_processing_calendar_day_limit
+          )
+
+  - name: application_processing_day_one_set_from_district_receipt
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: 18 NYCRR section 387.5(c)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/regulation/18-nycrr-387/387.5
+              excerpt: "the signed form containing at least the applicant's name and address is received through the mail or in person"
+          - path: versions[0].formula
+            kind: import
+            import:
+              target: us-ny:regulations/18-nycrr-387/387.5#application_processing_day_one_calendar_day_offset
+              output: application_processing_day_one_calendar_day_offset
+              hash: sha256:local
+    versions:
+      - effective_from: '2025-10-01'
+        formula: |-
+          application_received_by_local_social_services_district
+          and application_processing_day_one_calendar_days_after_receipt == application_processing_day_one_calendar_day_offset
