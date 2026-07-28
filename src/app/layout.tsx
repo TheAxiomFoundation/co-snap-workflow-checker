@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { GeistSans } from "geist/font/sans";
 import { JetBrains_Mono, Newsreader } from "next/font/google";
 import { Footer, GradientSync, Nav } from "@axiom-foundation/ui";
@@ -51,6 +52,14 @@ export default function RootLayout({
       className={`${GeistSans.variable} ${mono.variable} ${serif.variable}`}
     >
       <body>
+        <Script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-5PB7KEWV38"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag("js",new Date());gtag("config","G-5PB7KEWV38");`}
+        </Script>
         <GradientSync />
         <Nav
           baseUrl="https://axiom-foundation.org"
