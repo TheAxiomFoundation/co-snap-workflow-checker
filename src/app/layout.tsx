@@ -54,13 +54,13 @@ export default function RootLayout({
         <GradientSync />
         <Nav
           baseUrl="https://axiom-foundation.org"
-          logoSrc="/workflow/logos/axiom-foundation.svg"
+          logoSrc="/gallery/workflow/logos/axiom-foundation.svg"
         />
         <main className="relative z-10">{children}</main>
         <Footer
           renderLink={Link}
           baseUrl="https://axiom-foundation.org"
-          logoSrc="/workflow/logos/axiom-foundation.svg"
+          logoSrc="/gallery/workflow/logos/axiom-foundation.svg"
         />
       </body>
     </html>

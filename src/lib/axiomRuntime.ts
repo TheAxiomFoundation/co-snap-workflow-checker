@@ -130,7 +130,8 @@ async function createRuntime(
 ): Promise<SnapWorkflowRuntime> {
   const wasm = await loadWasmModule();
   await wasm.default({
-    module_or_path: "/workflow/axiom-rules-engine/axiom_rules_engine_wasm_bg.wasm",
+    module_or_path:
+      "/gallery/workflow/axiom-rules-engine/axiom_rules_engine_wasm_bg.wasm",
   });
 
   const modules = await loadRuleSpecModules(definition);
@@ -201,7 +202,7 @@ async function loadRuleSpecModules(definition: StateDefinition) {
       const relativePath = target
         .replace(
           `${definition.rulespecPrefix}:`,
-          `/workflow/rulespec/${definition.rulespecPrefix}/`,
+          `/gallery/workflow/rulespec/${definition.rulespecPrefix}/`,
         )
         .concat(".yaml");
       const text = await fetch(relativePath).then((response) => {
@@ -221,7 +222,9 @@ async function loadWasmModule(): Promise<AxiomWasmModule> {
     specifier: string,
   ) => Promise<AxiomWasmModule>;
 
-  return dynamicImport("/workflow/axiom-rules-engine/axiom_rules_engine_wasm.js");
+  return dynamicImport(
+    "/gallery/workflow/axiom-rules-engine/axiom_rules_engine_wasm.js",
+  );
 }
 
 function executeOutputs(
