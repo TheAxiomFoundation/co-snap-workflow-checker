@@ -54,11 +54,11 @@ export default function RootLayout({
       <body>
         <Script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=G-5PB7KEWV38"
+          src="https://www.googletagmanager.com/gtag/js?id=G-2YHG89FY0N"
           strategy="afterInteractive"
         />
         <Script id="gtag-init" strategy="afterInteractive">
-          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag("js",new Date());gtag("config","G-5PB7KEWV38");`}
+          {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)};gtag("js",new Date());gtag("config","G-2YHG89FY0N");`}
         </Script>
         <GradientSync />
         <Nav
