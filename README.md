@@ -6,11 +6,16 @@ is the default state; Colorado remains available from the in-app state switcher.
 
 ## Encoded rule surfaces
 
-**New York (default) — 18 NYCRR Part 387**
+**New York (default) — OTDA SNAP Source Book §4 (Application Processing)**
 
-- `387.5` — filing, minimum application content, and the 30-day processing clock
-- `387.7` — interview timing and missed-interview notices
-- `387.8` — expedited service benefit availability
+One corpus-backed module, `us-ny:manuals/otda/snap-source-book/section-4`:
+
+- §4(B) — right to apply and minimum filing content
+- §4(D) — date of application, day one of the count, and the 30-day
+  eligibility-and-issuance clock
+- §4(E) — interviews (initial certification + every 12 months), the LDSS-4753
+  missed-interview notice with no denial before the 30th day, the 60-day
+  re-registration window, and the 5-day expedited standard
 
 **Colorado — 10 CCR 2506-1**
 
@@ -18,19 +23,31 @@ is the default state; Colorado remains available from the in-app state switcher.
 - `4.204` — interview timing and missed interviews
 - `4.205` — normal and expedited processing clocks
 
+## Corpus provenance
+
+Both states' proof excerpts are backed by `axiom-corpus`:
+
+- New York: `us-ny/manual/otda/snap-source-book/section-4` — the official OTDA
+  SNAP Source Book (Sept 2025 edition, ingested 2026-05-27). Every `excerpt:`
+  in the NY module is copied verbatim from the corpus provision body.
+- Colorado: `us-co/regulation/10-ccr-2506-1/...` — the CCR SNAP rules ingest.
+
 ## New York encoding notes
 
-- The NYCRR text sets the expedited benefit deadline at the **seventh calendar
-  day** after filing (387.8(a)). OTDA policy directives describe a five-day
-  expedited practice, but that figure is not in the regulation, so the modules
-  encode 7.
-- New York's regulations do not contain Colorado's 60-day application validity
-  window or the 30th-day missed-interview denial rule (those live in federal
-  rules and OTDA policy), so the New York checklist omits those two checks.
-- The processing "day one" offset of 1 calendar day after receipt is an
-  interpretation of "within 30 days of filing an application" (387.5(f))
-  combined with the filing-date rule in 387.5(c); the regulation does not state
-  the offset explicitly.
+- **Expedited is 5 days.** SNAPSB §4(E)(4) sets "eligibility and benefit
+  issuance within 5 days for expedited processing" for NTA applicants (citing
+  387.5). Note two conflicting figures elsewhere: §4(E)(1) says 7 days for
+  NTA/SNAP and TA/SNAP interview scheduling, and 18 NYCRR 387.8(a) says the
+  seventh calendar day. The module encodes the operative 5-day OTDA standard.
+- **Day one is explicit.** §4(D)'s worked example ("the first day of the count
+  is April 2nd" for an April 1st filing) supports the offset-of-1 parameter
+  directly — no interpretation needed.
+- **The 60-day check is a re-registration window** (§4(E)(5): the original
+  application can be re-registered within 60 days), not Colorado's
+  validity-window framing.
+- The corpus currently holds 18 NYCRR 387.9/.10/.12/.14 but not 387.5/.7/.8;
+  if those sections are ingested later, the module's citations can be extended
+  to the regulation as well.
 
 ## Structure
 

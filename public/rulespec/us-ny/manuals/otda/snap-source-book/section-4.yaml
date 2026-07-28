@@ -1,0 +1,310 @@
+format: rulespec/v1
+module:
+  proof_validation:
+    required: true
+  source_verification:
+    corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+  summary: |-
+    Section 4 (Application Processing) of the New York OTDA SNAP Source Book covers the right to apply and minimum filing content (a form with the applicant's name, address if they have one, and the signature of a responsible household member or authorized representative), the date of application (the date the signed form with name, address if applicable, and signature is received by the district, with day one of the 30-day processing count being the first calendar day following the filing date), the requirement to approve and issue benefits or deny applications within 30 days, applicant interviews before initial certification and at least once every 12 months, the LDSS-4753 missed-interview notice and the prohibition on denying applications before the 30th day for a missed interview, re-registration of the original application within 60 days, and eligibility determination and benefit issuance within 5 days for expedited processing of non-public-assistance applications.
+rules:
+  - name: snap_incomplete_application_minimum_content_met
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(B)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "the form contains the applicant's name and address (if they have one) and is signed by a responsible member of the household or the household’s authorized representative"
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          application_form_contains_name
+          and application_form_contains_address
+          and (
+              application_form_signed_by_responsible_household_member
+              or application_form_signed_by_household_authorized_representative
+          )
+
+  - name: snap_application_signature_valid
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(D)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: definition
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "The date of application filing shall be the date the signed form, containing at least the applicant's name, address (if applicable), and signature, is received through the mail, fax, electronically or in person by the district."
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          application_form_signed
+
+  - name: snap_application_reregistration_calendar_day_limit
+    kind: parameter
+    dtype: Count
+    source: OTDA SNAP Source Book section 4(E)(5)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "The original application can be re-registered as a new application as long as the household re-applies for SNAP within 60 days of the original application date."
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          60
+
+  - name: original_application_reregistration_window_open
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(E)(5)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+          - path: versions[0].formula
+            kind: import
+            import:
+              target: us-ny:manuals/otda/snap-source-book/section-4#snap_application_reregistration_calendar_day_limit
+              output: snap_application_reregistration_calendar_day_limit
+              hash: sha256:local
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          days_since_application_filed <= snap_application_reregistration_calendar_day_limit
+
+  - name: normal_processing_calendar_day_limit
+    kind: parameter
+    dtype: Count
+    source: OTDA SNAP Source Book section 4(D)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "Approve and issue benefits or deny applications for TA/SNAP and NTA/SNAP applicants within 30 days from the first calendar day following the filing date of an identifiable application"
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          30
+
+  - name: application_processing_day_one_calendar_day_offset
+    kind: parameter
+    dtype: Count
+    source: OTDA SNAP Source Book section 4(D)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "the district has 30 days following the April 1st filing date, or until May 1st, to process the SNAP application. In this example, the first day of the count is April 2nd."
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          1
+
+  - name: newly_certified_household_eligibility_determination_and_issuance_timely
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(D)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+          - path: versions[0].formula
+            kind: import
+            import:
+              target: us-ny:manuals/otda/snap-source-book/section-4#normal_processing_calendar_day_limit
+              output: normal_processing_calendar_day_limit
+              hash: sha256:local
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          (not household_newly_certified)
+          or household_given_expedited_service
+          or (
+              eligibility_determined_and_benefits_issued
+              and calendar_days_following_application_filing_before_eligibility_determination_and_issuance <= normal_processing_calendar_day_limit
+          )
+
+  - name: application_processing_day_one_set_from_district_receipt
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(D)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "The date of application filing shall be the date the signed form, containing at least the applicant's name, address (if applicable), and signature, is received through the mail, fax, electronically or in person by the district."
+          - path: versions[0].formula
+            kind: import
+            import:
+              target: us-ny:manuals/otda/snap-source-book/section-4#application_processing_day_one_calendar_day_offset
+              output: application_processing_day_one_calendar_day_offset
+              hash: sha256:local
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          application_received_by_local_social_services_district
+          and application_processing_day_one_calendar_days_after_receipt == application_processing_day_one_calendar_day_offset
+
+  - name: initial_and_periodic_interview_month_limit
+    kind: parameter
+    dtype: Count
+    source: OTDA SNAP Source Book section 4(E)(1)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "must complete an interview prior to initial certification and at least once every 12 months thereafter"
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          12
+
+  - name: applicant_household_interview_requirement_met
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(E)(1)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+          - path: versions[0].formula
+            kind: import
+            import:
+              target: us-ny:manuals/otda/snap-source-book/section-4#initial_and_periodic_interview_month_limit
+              output: initial_and_periodic_interview_month_limit
+              hash: sha256:local
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          household_interviewed_before_initial_certification
+          and months_since_last_household_interview <= initial_and_periodic_interview_month_limit
+
+  - name: missed_interview_application_denial_calendar_day
+    kind: parameter
+    dtype: Count
+    source: OTDA SNAP Source Book section 4(E)(5)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "no SNAP application is denied prior to the 30th day from the application date for failure to appear for an eligibility interview"
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          30
+
+  - name: missed_interview_notice_and_denial_timing_compliant
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(E)(5)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "the LDSS-4753, “SNAP Request For Contact/Missed Interview” notice or the system generated CNS equivalent informing them that it is the household’s responsibility to reschedule their interview"
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          household_failed_to_attend_scheduled_interview
+          and district_sent_missed_interview_notice_to_household
+          and notice_informed_household_responsible_for_rescheduling_interview
+          and (
+              household_contacted_district_to_reschedule_within_processing_timeframe
+              or not application_denied_before_thirtieth_day
+          )
+
+  - name: expedited_service_benefit_availability_calendar_day_limit
+    kind: parameter
+    dtype: Count
+    source: OTDA SNAP Source Book section 4(E)(4)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: parameter
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+              excerpt: "a determination of eligibility and benefit issuance within 5 days for expedited processing and 30 days for normal filing of an application"
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          5
+
+  - name: expedited_service_household_benefits_available_timely
+    kind: derived
+    entity: Household
+    dtype: Judgment
+    period: Month
+    source: OTDA SNAP Source Book section 4(E)(4)
+    metadata:
+      proof:
+        atoms:
+          - path: versions[0].formula
+            kind: formula
+            source:
+              corpus_citation_path: us-ny/manual/otda/snap-source-book/section-4
+          - path: versions[0].formula
+            kind: import
+            import:
+              target: us-ny:manuals/otda/snap-source-book/section-4#expedited_service_benefit_availability_calendar_day_limit
+              output: expedited_service_benefit_availability_calendar_day_limit
+              hash: sha256:local
+    versions:
+      - effective_from: '2025-09-24'
+        formula: |-
+          (not household_entitled_to_expedited_service)
+          or (
+              benefits_available_to_household
+              and calendar_days_following_application_before_benefits_available <= expedited_service_benefit_availability_calendar_day_limit
+          )

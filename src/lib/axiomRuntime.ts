@@ -134,10 +134,16 @@ async function createRuntime(
   });
 
   const modules = await loadRuleSpecModules(definition);
+  const compiledByTarget = new Map(
+    [...new Set(Object.values(definition.modules))].map((target) => [
+      target,
+      wasm.compile(JSON.stringify(modules), target),
+    ]),
+  );
   const artifacts = Object.fromEntries(
     MODULE_KEYS.map((key) => [
       key,
-      wasm.compile(JSON.stringify(modules), definition.modules[key]),
+      compiledByTarget.get(definition.modules[key]) as string,
     ]),
   ) as Record<ModuleKey, string>;
   const parameters = definition.extractParameters(
@@ -157,6 +163,9 @@ async function createRuntime(
     const judgments: Record<string, boolean> = {};
 
     for (const key of MODULE_KEYS) {
+      if (definition.outputs[key].length === 0) {
+        continue;
+      }
       const outputs = executeOutputs(
         wasm,
         artifacts[key],
@@ -188,7 +197,7 @@ async function createRuntime(
 
 async function loadRuleSpecModules(definition: StateDefinition) {
   const entries = await Promise.all(
-    Object.values(definition.modules).map(async (target) => {
+    [...new Set(Object.values(definition.modules))].map(async (target) => {
       const relativePath = target
         .replace(
           `${definition.rulespecPrefix}:`,
